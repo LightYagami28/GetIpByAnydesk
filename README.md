@@ -16,7 +16,7 @@ Follow these steps to set up the project:
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Pari030/GetIpByAnydesk
+   git clone https://github.com/LightYagami28/GetIpByAnydesk
    ```
 
 2. Navigate to the project directory:
