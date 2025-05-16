@@ -10,7 +10,7 @@ This tool can be run before starting AnyDesk and will automatically detect and l
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=LightYagami28_GetIpByAnydesk&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=LightYagami28_GetIpByAnydesk)
 
 
-## Installation Guide (Git Required)
+### Installation Guide (Git Required)
 
 Follow these steps to set up the project:
 
