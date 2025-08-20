@@ -1,82 +1,108 @@
-import os
 import sys
-import wmi
 import psutil
-import requests
+import asyncio
+import aiohttp
 import logging
 from typing import List, Dict
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
+
+
+def is_valid_connection(conn: psutil._common.sconn) -> bool:
+    """Check if a connection is valid for logging (non-local, active AnyDesk)."""
+    return (
+        conn.status in ("SYN_SENT", "ESTABLISHED")
+        and conn.raddr
+        and conn.raddr.ip
+        and conn.raddr.port != 80
+        and not conn.raddr.ip.startswith("192.168.")
+    )
+
 
 def get_ips() -> List[str]:
-    """Get unique IPs of remote connections from Anydesk processes."""
-    wmi_obj = wmi.WMI()
+    """Get unique remote IPs from network connections related to AnyDesk."""
     ips = []
-
-    for process in wmi_obj.Win32_Process():
+    for conn in psutil.net_connections(kind="inet"):
         try:
-            if 'anydesk' in process.Name.lower():
-                for conn in psutil.Process(process.ProcessId).connections():
-                    if conn.status in ('SYN_SENT', 'ESTABLISHED') and conn.raddr.ip:
-                        conn_ip = conn.raddr.ip
-                        if conn.raddr.port != 80 and not conn_ip.startswith('192.168.') and conn_ip not in ips:
-                            ips.append(conn_ip)
-        except psutil.NoSuchProcess:
-            continue
+            if is_valid_connection(conn):
+                if conn.raddr.ip not in ips:
+                    if conn.pid:
+                        try:
+                            proc = psutil.Process(conn.pid)
+                            if "anydesk" in proc.name().lower():
+                                ips.append(conn.raddr.ip)
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+        except AttributeError:
 
+            continue
     return ips
 
-def get_ip_info(conn_ip: str) -> Dict[str, str]:
-    """Get geographical information about the IP using the ip-api service."""
+
+async def get_ip_info(session: aiohttp.ClientSession, conn_ip: str) -> Dict[str, str]:
+    """Get geographical information about the IP using the ip-api service (async)."""
+    url = f"https://ip-api.com/json/{conn_ip}"
     try:
-        response = requests.get(f'http://ip-api.com/json/{conn_ip}', timeout=5)
-        response.raise_for_status() 
-        data = response.json()
-        return {
-            "IP": conn_ip,
-            "Country": data.get('country', 'Unknown'),
-            "Region": data.get('regionName', 'Unknown'),
-            "City": data.get('city', 'Unknown'),
-            "ISP": data.get('isp', 'Unknown')
-        }
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Failed to get IP info for {conn_ip}: {e}")
-        return {
-            "IP": conn_ip,
-            "Country": "Unknown",
-            "Region": "Unknown",
-            "City": "Unknown",
-            "ISP": "Unknown"
-        }
+        async with session.get(url, timeout=5) as response:
+            data = await response.json()
+            return {
+                "IP": conn_ip,
+                "Country": data.get("country", "Unknown"),
+                "Region": data.get("regionName", "Unknown"),
+                "City": data.get("city", "Unknown"),
+                "ISP": data.get("isp", "Unknown"),
+            }
+    except aiohttp.ClientError as e:
+        logging.error(f"Network error while fetching {conn_ip}: {e}")
+    except asyncio.TimeoutError:
+        logging.error(f"Timeout while fetching info for {conn_ip}")
+    except ValueError:
+        logging.error(f"Invalid JSON received for {conn_ip}")
+
+    return {
+        "IP": conn_ip,
+        "Country": "Unknown",
+        "Region": "Unknown",
+        "City": "Unknown",
+        "ISP": "Unknown",
+    }
+
 
 def try_exit() -> None:
     """Exit from the program."""
     logging.info("Exiting program...")
     sys.exit(0)
 
-def main() -> None:
-    """Main loop to monitor Anydesk connections and fetch IP information."""
-    msg = 'Anydesk is turned off or no one is trying to connect to your monitor, retry... [CTRL+C to exit]'
+
+async def main() -> None:
+    """Main loop to monitor Anydesk connections and fetch IP information asynchronously."""
+    msg = "Anydesk is turned off or no one is trying to connect to your monitor, retry... [CTRL+C to exit]"
 
     while True:
+        ips: List[str] = []  # sempre inizializzato
         try:
             ips = get_ips()
             logging.info(f"Checked for connections. Found {len(ips)} unique IP(s).")
 
             if ips:
-                for conn_ip in ips:
+                async with aiohttp.ClientSession() as session:
+                    tasks = [get_ip_info(session, ip) for ip in ips]
+                    results = await asyncio.gather(*tasks)
+
+                for infos in results:
                     logging.info("Connection Found, fetching details:")
-                    infos = get_ip_info(conn_ip)
                     for key, value in infos.items():
-                        logging.info(f'{key}: {value}')
+                        logging.info(f"{key}: {value}")
             else:
                 logging.info(msg)
+
         except KeyboardInterrupt:
-            logging.info('Program finished, exiting...')
+            logging.info("Program finished, exiting...")
             try_exit()
 
         if ips:
             break
 
-if __name__ == '__main__':
-    main()
+
+if __name__ == "__main__":
+    asyncio.run(main())
