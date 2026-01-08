@@ -6,7 +6,6 @@ This tool can be run before starting AnyDesk and will automatically detect and l
 
 > **Disclaimer:** This tool is intended for personal use only. It is not intended to track or monitor any individual without their consent. Please ensure you are in compliance with local laws and regulations regarding privacy and data protection before using this tool. Unauthorized tracking or logging of IP addresses may violate privacy laws.
 
-[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=LightYagami28_GetIpByAnydesk&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=LightYagami28_GetIpByAnydesk)
 
 ## Installation Guide (Git Required)
 
