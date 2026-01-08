@@ -3,12 +3,13 @@ import psutil
 import asyncio
 import aiohttp
 import logging
+import ipaddress
 from typing import List, Dict
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
 
-def is_valid_connection(conn: psutil._common.sconn) -> bool:
+def is_valid_connection(conn) -> bool:
     """Check if a connection is valid for logging (non-local, active AnyDesk)."""
     return (
         conn.status in ("SYN_SENT", "ESTABLISHED")
@@ -17,6 +18,19 @@ def is_valid_connection(conn: psutil._common.sconn) -> bool:
         and conn.raddr.port != 80
         and not conn.raddr.ip.startswith("192.168.")
     )
+
+
+def normalize_public_ip(raw_ip: str) -> str | None:
+    """Validate and normalize a public IP address, skipping private/reserved ranges."""
+    try:
+        parsed = ipaddress.ip_address(raw_ip)
+    except ValueError:
+        return None
+
+    if not parsed.is_global:
+        return None
+
+    return str(parsed)
 
 
 def get_ips() -> List[str]:
@@ -34,7 +48,7 @@ def get_ips() -> List[str]:
             continue
 
         pid = conn.pid
-        remote_ip = getattr(conn.raddr, "ip", None)
+        remote_ip = normalize_public_ip(getattr(conn.raddr, "ip", None))
 
         if not pid or not remote_ip or remote_ip in ips:
             continue
@@ -53,7 +67,17 @@ def get_ips() -> List[str]:
 
 async def get_ip_info(session: aiohttp.ClientSession, conn_ip: str) -> Dict[str, str]:
     """Get geographical information about the IP using the ip-api service (async)."""
-    url = f"https://ip-api.com/json/{conn_ip}"
+    safe_ip = normalize_public_ip(conn_ip)
+    if not safe_ip:
+        return {
+            "IP": conn_ip,
+            "Country": "Unknown",
+            "Region": "Unknown",
+            "City": "Unknown",
+            "ISP": "Unknown",
+        }
+
+    url = f"https://ip-api.com/json/{safe_ip}"
     try:
         async with session.get(url, timeout=5) as response:
             data = await response.json()

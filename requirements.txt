@@ -1,3 +1,5 @@
 wmi
 psutil
 aiohttp
+pytest
+pytest-asyncio
