@@ -21,22 +21,34 @@ def is_valid_connection(conn: psutil._common.sconn) -> bool:
 
 def get_ips() -> List[str]:
     """Get unique remote IPs from network connections related to AnyDesk."""
-    ips = []
-    for conn in psutil.net_connections(kind="inet"):
-        try:
-            if is_valid_connection(conn):
-                if conn.raddr.ip not in ips:
-                    if conn.pid:
-                        try:
-                            proc = psutil.Process(conn.pid)
-                            if "anydesk" in proc.name().lower():
-                                ips.append(conn.raddr.ip)
-                        except (psutil.NoSuchProcess, psutil.AccessDenied):
-                            continue
-        except AttributeError:
+    ips: set[str] = set()
 
+    try:
+        connections = psutil.net_connections(kind="inet")
+    except psutil.Error as exc:  # pragma: no cover - defensive
+        logging.error("Unable to read network connections: %s", exc)
+        return []
+
+    for conn in connections:
+        if not is_valid_connection(conn):
             continue
-    return ips
+
+        pid = conn.pid
+        remote_ip = getattr(conn.raddr, "ip", None)
+
+        if not pid or not remote_ip or remote_ip in ips:
+            continue
+
+        try:
+            proc = psutil.Process(pid)
+            proc_name = proc.name().lower()
+        except psutil.Error:
+            continue
+
+        if "anydesk" in proc_name:
+            ips.add(remote_ip)
+
+    return list(ips)
 
 
 async def get_ip_info(session: aiohttp.ClientSession, conn_ip: str) -> Dict[str, str]:

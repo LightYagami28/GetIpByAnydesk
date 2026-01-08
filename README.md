@@ -6,35 +6,38 @@ This tool can be run before starting AnyDesk and will automatically detect and l
 
 > **Disclaimer:** This tool is intended for personal use only. It is not intended to track or monitor any individual without their consent. Please ensure you are in compliance with local laws and regulations regarding privacy and data protection before using this tool. Unauthorized tracking or logging of IP addresses may violate privacy laws.
 
-
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=LightYagami28_GetIpByAnydesk&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=LightYagami28_GetIpByAnydesk)
 
-
-### Installation Guide (Git Required)
+## Installation Guide (Git Required)
 
 Follow these steps to set up the project:
 
 1. Clone the repository:
+
    ```bash
    git clone https://github.com/LightYagami28/GetIpByAnydesk
    ```
 
 2. Navigate to the project directory:
+
    ```bash
    cd GetIpByAnydesk
    ```
 
 3. Install the required dependencies:
+
    ```bash
    py -m pip install -r requirements.txt
    ```
 
 4. Go to the `src` folder:
+
    ```bash
    cd src
    ```
 
 5. Run the application:
+
    ```bash
    py main.py
    ```
