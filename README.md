@@ -1,6 +1,6 @@
 # Get IP By Anydesk
 
-**Get the IP address of anyone trying to connect to your monitor via AnyDesk (currently supports Microsoft Windows only).**
+**Get the IP address of anyone trying to connect to your monitor via AnyDesk (Windows and Linux entries available).**
 
 This tool can be run before starting AnyDesk and will automatically detect and log the IPs of incoming connections.
 
@@ -35,18 +35,17 @@ Follow these steps to set up the project:
    cd src
    ```
 
-5. Run the application:
+5. Run the application (choose the entry point for your OS):
 
-   ```bash
-   py main.py
-   ```
+   - **Windows**: `python -m src.main` or `python -m src.windows.main`
+   - **Linux**: `python3 -m src.main` or `python3 -m src.linux.main`
 
 ## Features
 
 - ✅ **Automatic monitoring**: The program will continuously check for incoming AnyDesk connections.
 - ✅ **IP Address Collection**: Once a connection attempt is detected, the program automatically retrieves the IP address of the client.
 - ✅ **Detailed IP Information**: Fetches additional information about the IP address, including country, region, city, and ISP.
-- ❌ **Linux Compatibility**: Currently, the program is only compatible with Microsoft Windows. (Support for Linux is planned for future updates.)
+- ✅ **Cross-platform entries**: Windows and Linux launchers live under `src/windows/` and `src/linux/`, with `src/main.py` auto-selecting the right one based on the OS.
 
 ## Example Screenshot
 
